@@ -1,0 +1,1632 @@
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>COMICCRAFT – AI Comic Story Creator</title>
+  <meta name="description" content="Turn your imagination into a comic with Google Gemini AI. Generate characters, narrative panels, dynamic dialogue, and art scenes." />
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            brand: {
+              purple: '#8b5cf6',
+              purpleDark: '#6d28d9',
+              cyan: '#06b6d4',
+              pink: '#ec4899',
+              yellow: '#fbbf24',
+              dark: '#090b14',
+              card: '#121629',
+              cardBorder: '#232948',
+              surface: '#181d36',
+            }
+          },
+          fontFamily: {
+            sans: ['Inter', 'sans-serif'],
+            comic: ['"Bangers"', '"Comic Neue"', 'cursive', 'sans-serif'],
+            mono: ['"JetBrains Mono"', 'monospace']
+          },
+          boxShadow: {
+            'neon-purple': '0 0 25px -5px rgba(139, 92, 246, 0.5)',
+            'neon-cyan': '0 0 25px -5px rgba(6, 182, 212, 0.5)',
+            'comic': '4px 4px 0px 0px #000',
+            'comic-lg': '6px 6px 0px 0px #000'
+          },
+          animation: {
+            'pulse-slow': 'pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            'float': 'float 4s ease-in-out infinite',
+            'shimmer': 'shimmer 2s infinite linear'
+          },
+          keyframes: {
+            float: {
+              '0%, 100%': { transform: 'translateY(0px)' },
+              '50%': { transform: 'translateY(-10px)' },
+            },
+            shimmer: {
+              '0%': { backgroundPosition: '-200% 0' },
+              '100%': { backgroundPosition: '200% 0' }
+            }
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Inter:wght@300;400;500;600;700;800;900&family=JetBrains+Mono:wght@400;600&display=swap" rel="stylesheet">
+  
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Vue 3 for reactive state management -->
+  <script src="https://unpkg.com/vue@3/dist/vue.global.prod.js"></script>
+
+  <style>
+    /* Halftone dot pattern background */
+    .bg-halftone {
+      background-image: radial-gradient(rgba(139, 92, 246, 0.12) 1.5px, transparent 1.5px);
+      background-size: 24px 24px;
+    }
+    
+    .bg-dots-dense {
+      background-image: radial-gradient(rgba(255, 255, 255, 0.1) 1px, transparent 1px);
+      background-size: 12px 12px;
+    }
+
+    /* Comic Speech Bubble with Tail */
+    .speech-bubble {
+      position: relative;
+      border-radius: 1rem;
+    }
+    .speech-bubble::after {
+      content: '';
+      position: absolute;
+      bottom: -10px;
+      left: 24px;
+      border-width: 10px 10px 0;
+      border-style: solid;
+      border-color: #ffffff transparent;
+      display: block;
+      width: 0;
+    }
+    .speech-bubble-dark::after {
+      border-color: #1e2442 transparent;
+    }
+    .speech-bubble-right::after {
+      left: auto;
+      right: 24px;
+    }
+
+    /* Custom Scrollbar */
+    ::-webkit-scrollbar {
+      width: 8px;
+      height: 8px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #090b14;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #283056;
+      border-radius: 4px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #8b5cf6;
+    }
+
+    /* Comic Action Text Shadow */
+    .comic-title-glow {
+      text-shadow: 3px 3px 0px #000, 0 0 20px rgba(139, 92, 246, 0.6);
+    }
+    .comic-panel-border {
+      border: 3px solid #101426;
+      box-shadow: 0 10px 25px -5px rgba(0,0,0,0.6);
+    }
+    .comic-panel-border:hover {
+      border-color: #8b5cf6;
+    }
+
+    /* Glassmorphism */
+    .glass-card {
+      background: rgba(18, 22, 41, 0.75);
+      backdrop-filter: blur(12px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+  </style>
+</head>
+<body class="bg-brand-dark text-slate-100 font-sans min-h-screen bg-halftone selection:bg-brand-purple selection:text-white">
+
+  <div id="app" class="flex flex-col min-h-screen relative overflow-x-hidden">
+    
+    <!-- TOP NAVIGATION BAR -->
+    <header class="sticky top-0 z-50 border-b border-brand-cardBorder/80 bg-brand-dark/85 backdrop-blur-md">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+        
+        <!-- Logo -->
+        <div @click="currentView = 'home'" class="flex items-center gap-3 cursor-pointer group">
+          <div class="w-11 h-11 rounded-xl bg-gradient-to-br from-brand-purple via-brand-pink to-brand-cyan flex items-center justify-center shadow-neon-purple transform group-hover:scale-105 transition-transform duration-200">
+            <span class="font-comic text-2xl text-white tracking-wider">CC</span>
+          </div>
+          <div>
+            <div class="flex items-center gap-2">
+              <span class="font-comic text-2xl tracking-wider text-transparent bg-clip-text bg-gradient-to-r from-white via-slate-100 to-purple-200">COMICCRAFT</span>
+              <span class="text-[10px] uppercase font-bold tracking-widest px-2 py-0.5 rounded bg-brand-purple/20 text-brand-cyan border border-brand-purple/30">AI STUDIO</span>
+            </div>
+            <p class="text-[11px] text-slate-400 font-medium -mt-1 hidden sm:block">Gemini Powered Comic Generator</p>
+          </div>
+        </div>
+
+        <!-- Center Nav Links -->
+        <nav class="hidden md:flex items-center gap-1 bg-brand-card/70 p-1.5 rounded-full border border-brand-cardBorder">
+          <button @click="currentView = 'home'" :class="currentView === 'home' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-white/5'" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all">
+            Home
+          </button>
+          <button @click="currentView = 'create'" :class="currentView === 'create' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-white/5'" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5">
+            <span>✨ Create</span>
+          </button>
+          <button @click="currentView = 'library'" :class="currentView === 'library' ? 'bg-brand-purple text-white shadow-md' : 'text-slate-300 hover:text-white hover:bg-white/5'" class="px-4 py-1.5 rounded-full text-xs font-semibold transition-all flex items-center gap-1.5">
+            <span>My Comics</span>
+            <span v-if="savedComics.length > 0" class="w-4 h-4 text-[10px] bg-brand-pink text-white rounded-full inline-flex items-center justify-center font-bold">
+              {{ savedComics.length }}
+            </span>
+          </button>
+          <button @click="openDocsModal" class="px-4 py-1.5 rounded-full text-xs font-semibold text-slate-400 hover:text-white transition-all flex items-center gap-1.5">
+            <i data-lucide="terminal" class="w-3.5 h-3.5 text-brand-cyan"></i>
+            <span>Backend & API</span>
+          </button>
+        </nav>
+
+        <!-- Right Action Controls -->
+        <div class="flex items-center gap-3">
+          <!-- Demo Mode Indicator / Settings -->
+          <button @click="openApiSettings" class="flex items-center gap-2 text-xs font-medium px-3 py-1.5 rounded-lg border border-slate-700 bg-slate-900/60 hover:border-brand-purple/50 transition">
+            <span class="w-2 h-2 rounded-full" :class="apiKey ? 'bg-emerald-400 shadow-[0_0_8px_#34d399]' : 'bg-amber-400 shadow-[0_0_8px_#fbbf24]'"></span>
+            <span class="hidden sm:inline text-slate-300">{{ apiKey ? 'Gemini Live' : 'Demo Mode Active' }}</span>
+            <i data-lucide="settings" class="w-3.5 h-3.5 text-slate-400"></i>
+          </button>
+
+          <!-- Quick Create Action Button -->
+          <button @click="startNewComic" class="relative group overflow-hidden rounded-xl p-px font-semibold text-xs transition duration-300 transform active:scale-95">
+            <span class="absolute inset-0 bg-gradient-to-r from-brand-purple via-brand-pink to-brand-cyan group-hover:opacity-100 transition-opacity"></span>
+            <span class="relative block px-4 py-2 rounded-[11px] bg-brand-dark/90 text-white group-hover:bg-transparent transition-colors flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5 text-brand-yellow"></i>
+              <span>New Comic</span>
+            </span>
+          </button>
+        </div>
+
+      </div>
+    </header>
+
+    <!-- MAIN CONTENT ROUTER -->
+    <main class="flex-grow">
+
+      <!-- ================= 1. HOME VIEW ================= -->
+      <section v-if="currentView === 'home'" class="relative pb-24">
+        
+        <!-- Hero Background Glows -->
+        <div class="absolute top-10 left-1/2 -translate-x-1/2 w-[600px] h-[350px] bg-brand-purple/20 blur-[120px] pointer-events-none rounded-full"></div>
+        <div class="absolute top-40 right-10 w-[400px] h-[300px] bg-brand-cyan/15 blur-[100px] pointer-events-none rounded-full"></div>
+
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16 sm:pt-24 relative z-10">
+          <div class="text-center max-w-3xl mx-auto space-y-6">
+            
+            <div class="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-brand-purple/10 border border-brand-purple/30 text-purple-300 text-xs font-semibold">
+              <span class="flex h-2 w-2 rounded-full bg-brand-pink animate-ping"></span>
+              Powered by Google Gemini 1.5 Flash
+            </div>
+
+            <h1 class="text-4xl sm:text-6xl lg:text-7xl font-extrabold tracking-tight">
+              Turn Your Imagination <br>
+              <span class="font-comic tracking-normal text-transparent bg-clip-text bg-gradient-to-r from-brand-yellow via-brand-pink to-brand-cyan comic-title-glow">
+                INTO A COMIC!
+              </span>
+            </h1>
+
+            <p class="text-base sm:text-xl text-slate-300 font-normal max-w-2xl mx-auto leading-relaxed">
+              Create amazing stories, characters, action-packed panels, and comic dialogues instantly with Gemini AI.
+            </p>
+
+            <!-- CTA Row -->
+            <div class="pt-4 flex flex-col sm:flex-row items-center justify-center gap-4">
+              <button @click="currentView = 'create'" class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-brand-purple via-brand-pink to-brand-purpleDark hover:from-purple-500 hover:to-brand-purple text-white font-bold text-base shadow-neon-purple transform hover:-translate-y-0.5 active:translate-y-0 transition flex items-center justify-center gap-3">
+                <i data-lucide="sparkles" class="w-5 h-5 text-brand-yellow animate-spin"></i>
+                <span class="tracking-wide">✨ Create Comic</span>
+              </button>
+
+              <button @click="loadSampleAndPlay" class="w-full sm:w-auto px-6 py-4 rounded-xl bg-brand-surface/80 hover:bg-brand-surface border border-brand-cardBorder text-slate-200 font-semibold text-base transition flex items-center justify-center gap-2">
+                <i data-lucide="play-circle" class="w-5 h-5 text-brand-cyan"></i>
+                <span>Explore Demo Comic</span>
+              </button>
+            </div>
+
+            <!-- Highlights Pill -->
+            <div class="pt-8 flex flex-wrap justify-center gap-6 text-xs text-slate-400 font-medium">
+              <div class="flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-cyan"></i>
+                <span>Multi-Panel Story Arc</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-cyan"></i>
+                <span>Dialogue & Sound SFX</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-cyan"></i>
+                <span>Character Profiles</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <i data-lucide="check-circle-2" class="w-4 h-4 text-brand-cyan"></i>
+                <span>Export & Share</span>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Interactive Hero Showcase Card -->
+          <div class="mt-16 relative max-w-5xl mx-auto">
+            <div class="glass-card rounded-2xl p-4 sm:p-6 shadow-2xl border border-brand-cardBorder relative overflow-hidden">
+              <div class="flex items-center justify-between pb-4 border-b border-white/5 mb-6">
+                <div class="flex items-center gap-2">
+                  <div class="w-3 h-3 rounded-full bg-red-500/80"></div>
+                  <div class="w-3 h-3 rounded-full bg-yellow-500/80"></div>
+                  <div class="w-3 h-3 rounded-full bg-green-500/80"></div>
+                  <span class="text-xs text-slate-400 ml-2 font-mono">Comic Preview Engine v2.4</span>
+                </div>
+                <div class="text-xs font-comic tracking-wider text-brand-yellow px-2 py-0.5 rounded bg-brand-yellow/10 border border-brand-yellow/20">
+                  ISSUE #01 - FEATURED HIGHLIGHT
+                </div>
+              </div>
+
+              <!-- 3 Sample Mini Comic Strip Panels -->
+              <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                
+                <!-- Panel 1 Preview -->
+                <div class="bg-brand-dark/90 rounded-xl p-4 border-2 border-brand-cardBorder relative group hover:border-brand-cyan transition">
+                  <div class="text-[10px] font-mono font-bold text-brand-cyan uppercase tracking-wider mb-2">PANEL 1 • ESTABLISHING</div>
+                  <div class="h-36 rounded-lg bg-gradient-to-b from-indigo-950 to-slate-900 p-3 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute top-2 right-2 text-xl font-comic text-brand-pink tracking-widest transform rotate-6">NEON CITY!</div>
+                    <div class="text-[11px] bg-amber-200 text-slate-900 font-bold px-2 py-1 rounded shadow-comic leading-tight max-w-[85%]">
+                      "In the rain-drenched alleys of Neo-Kyoto, a lone shadow leaped between skyscrapers..."
+                    </div>
+                    <div class="flex justify-end">
+                      <div class="bg-white text-black text-[10px] font-bold px-2.5 py-1 rounded-full speech-bubble speech-bubble-right">
+                        Target spotted! 🎯
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Panel 2 Preview -->
+                <div class="bg-brand-dark/90 rounded-xl p-4 border-2 border-brand-cardBorder relative group hover:border-brand-purple transition">
+                  <div class="text-[10px] font-mono font-bold text-brand-purple uppercase tracking-wider mb-2">PANEL 2 • CLIMAX</div>
+                  <div class="h-36 rounded-lg bg-gradient-to-b from-purple-950 to-brand-dark p-3 flex flex-col justify-between relative overflow-hidden">
+                    <div class="absolute inset-0 flex items-center justify-center opacity-30">
+                      <i data-lucide="zap" class="w-20 h-20 text-brand-yellow"></i>
+                    </div>
+                    <div class="text-2xl font-comic text-brand-yellow text-center tracking-widest drop-shadow-[0_2px_4px_rgba(0,0,0,0.8)] transform -rotate-3">
+                      ⚡ *BZZZZT!* ⚡
+                    </div>
+                    <div class="flex justify-start">
+                      <div class="bg-white text-black text-[10px] font-bold px-2.5 py-1 rounded-full speech-bubble">
+                        You're too late, Detective!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Panel 3 Preview -->
+                <div class="bg-brand-dark/90 rounded-xl p-4 border-2 border-brand-cardBorder relative group hover:border-brand-pink transition">
+                  <div class="text-[10px] font-mono font-bold text-brand-pink uppercase tracking-wider mb-2">PANEL 3 • TWIST</div>
+                  <div class="h-36 rounded-lg bg-gradient-to-b from-slate-900 to-rose-950 p-3 flex flex-col justify-between relative overflow-hidden">
+                    <div class="text-[11px] bg-amber-200 text-slate-900 font-bold px-2 py-1 rounded shadow-comic leading-tight">
+                      "With a grin, the rogue pushed the secret button."
+                    </div>
+                    <div class="flex justify-end mt-4">
+                      <div class="bg-brand-pink text-white text-[10px] font-bold px-2.5 py-1 rounded-full speech-bubble speech-bubble-right">
+                        I wasn't escaping... I was summoning backup!
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+              </div>
+
+              <!-- Bottom prompt trigger in hero -->
+              <div class="mt-6 pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-3">
+                <span class="text-xs text-slate-400">Ready to author your own story? Pick any concept and let AI draft it.</span>
+                <button @click="currentView = 'create'" class="text-xs font-bold text-brand-cyan hover:text-cyan-300 flex items-center gap-1">
+                  Start In Studio Now <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+                </button>
+              </div>
+
+            </div>
+          </div>
+
+          <!-- Feature Grid -->
+          <div class="mt-24 grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div class="glass-card rounded-2xl p-6 border border-brand-cardBorder hover:border-brand-purple/40 transition">
+              <div class="w-12 h-12 rounded-xl bg-purple-500/10 text-brand-purple flex items-center justify-center mb-4 border border-purple-500/20">
+                <i data-lucide="brain-circuit" class="w-6 h-6"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">Gemini Structured Inking</h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Uses Google Gemini's JSON schema mode to craft coherent character arcs, cinematic camera angles, and catchy dialogues.
+              </p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6 border border-brand-cardBorder hover:border-brand-cyan/40 transition">
+              <div class="w-12 h-12 rounded-xl bg-cyan-500/10 text-brand-cyan flex items-center justify-center mb-4 border border-cyan-500/20">
+                <i data-lucide="layers" class="w-6 h-6"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">Comic Book Layouts</h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Classic yellow narration boxes, sound effect stickers (*POW!*, *BAM!*), speaker speech balloons, and aesthetic panel art.
+              </p>
+            </div>
+
+            <div class="glass-card rounded-2xl p-6 border border-brand-cardBorder hover:border-brand-pink/40 transition">
+              <div class="w-12 h-12 rounded-xl bg-pink-500/10 text-brand-pink flex items-center justify-center mb-4 border border-pink-500/20">
+                <i data-lucide="shield-check" class="w-6 h-6"></i>
+              </div>
+              <h3 class="text-lg font-bold text-white mb-2">Secure & Fullstack Ready</h3>
+              <p class="text-sm text-slate-400 leading-relaxed">
+                Equipped with Node.js/Express backend templates, Demo simulation mode, and LocalStorage caching.
+              </p>
+            </div>
+          </div>
+
+        </div>
+      </section>
+
+      <!-- ================= 2. CREATE COMIC VIEW ================= -->
+      <section v-if="currentView === 'create'" class="max-w-4xl mx-auto px-4 sm:px-6 py-10 relative">
+        
+        <div class="mb-8">
+          <div class="flex items-center gap-2 text-xs font-semibold text-brand-cyan uppercase tracking-wider mb-2">
+            <i data-lucide="wand-2" class="w-4 h-4"></i>
+            <span>Comic Studio Generator</span>
+          </div>
+          <h2 class="text-3xl sm:text-4xl font-extrabold text-white">Create Your Comic Story</h2>
+          <p class="text-sm text-slate-400 mt-1">Describe your prompt or pick an inspiration preset, configure panels and tone, then hit generate.</p>
+        </div>
+
+        <div class="glass-card rounded-2xl p-6 sm:p-8 border border-brand-cardBorder space-y-6 shadow-xl">
+          
+          <!-- Presets Inspiration Buttons -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <label class="text-xs font-bold uppercase tracking-wider text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="lightbulb" class="w-3.5 h-3.5 text-brand-yellow"></i>
+                <span>Quick Story Presets</span>
+              </label>
+              <span class="text-[11px] text-slate-500">Click any idea to auto-fill</span>
+            </div>
+            <div class="flex flex-wrap gap-2">
+              <button 
+                v-for="preset in storyPresets" 
+                :key="preset.label"
+                @click="applyPreset(preset)" 
+                type="button" 
+                class="text-xs px-3 py-1.5 rounded-lg bg-brand-surface hover:bg-brand-purple/20 border border-brand-cardBorder hover:border-brand-purple/40 text-slate-300 hover:text-white transition flex items-center gap-1.5">
+                <span>{{ preset.emoji }}</span>
+                <span>{{ preset.label }}</span>
+              </button>
+            </div>
+          </div>
+
+          <!-- Story Idea Input -->
+          <div>
+            <label class="block text-sm font-bold text-slate-200 mb-2">
+              Story Idea <span class="text-brand-pink">*</span>
+            </label>
+            <div class="relative">
+              <textarea 
+                v-model="form.prompt" 
+                rows="4" 
+                placeholder="Describe your story idea... (e.g. A grumpy cat detective in a cyberpunk metropolis must solve the case of the missing neon fish before the solar eclipse)" 
+                class="w-full bg-brand-dark/90 border-2 border-brand-cardBorder focus:border-brand-purple rounded-xl p-4 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-brand-purple/40 transition resize-y"></textarea>
+              <div class="absolute bottom-3 right-3 text-[11px] text-slate-500 font-mono">
+                {{ form.prompt.length }} chars
+              </div>
+            </div>
+            <p v-if="validationError" class="text-xs text-rose-400 mt-1.5 flex items-center gap-1">
+              <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i>
+              <span>{{ validationError }}</span>
+            </p>
+          </div>
+
+          <!-- Genre, Tone, Panels Grid -->
+          <div class="grid grid-cols-1 sm:grid-cols-3 gap-6 pt-2">
+            
+            <!-- Genre -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Genre</label>
+              <div class="relative">
+                <select v-model="form.genre" class="w-full appearance-none bg-brand-dark border-2 border-brand-cardBorder focus:border-brand-purple rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition cursor-pointer">
+                  <option value="Sci-Fi">🚀 Sci-Fi</option>
+                  <option value="Fantasy">🧙‍♂️ Fantasy</option>
+                  <option value="Adventure">🗺️ Adventure</option>
+                  <option value="Mystery">🔍 Mystery</option>
+                  <option value="Comedy">😂 Comedy</option>
+                  <option value="Cyberpunk">🤖 Cyberpunk</option>
+                  <option value="Superhero">🦸 Superhero</option>
+                  <option value="Horror">👻 Horror / Thriller</option>
+                </select>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              </div>
+            </div>
+
+            <!-- Tone -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Tone</label>
+              <div class="relative">
+                <select v-model="form.tone" class="w-full appearance-none bg-brand-dark border-2 border-brand-cardBorder focus:border-brand-purple rounded-xl px-4 py-3 text-sm text-white focus:outline-none transition cursor-pointer">
+                  <option value="Exciting">🔥 Exciting & Epic</option>
+                  <option value="Funny">🤪 Funny & Whimsical</option>
+                  <option value="Emotional">🥺 Emotional & Dramatic</option>
+                  <option value="Serious">🕶️ Serious & Dark Noir</option>
+                  <option value="Mysterious">🔮 Eerie & Mysterious</option>
+                </select>
+                <i data-lucide="chevron-down" class="w-4 h-4 text-slate-400 absolute right-4 top-1/2 -translate-y-1/2 pointer-events-none"></i>
+              </div>
+            </div>
+
+            <!-- Panels Count -->
+            <div>
+              <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Number of Panels</label>
+              <div class="grid grid-cols-3 gap-2">
+                <button 
+                  v-for="count in [4, 6, 8]" 
+                  :key="count" 
+                  type="button" 
+                  @click="form.panels = count"
+                  :class="form.panels === count ? 'bg-brand-purple text-white border-brand-purple' : 'bg-brand-dark border-brand-cardBorder text-slate-300 hover:border-slate-600'"
+                  class="py-3 rounded-xl border-2 font-bold text-sm text-center transition">
+                  {{ count }}
+                </button>
+              </div>
+            </div>
+
+          </div>
+
+          <!-- Art Style Option -->
+          <div>
+            <label class="block text-xs font-bold uppercase tracking-wider text-slate-300 mb-2">Visual Aesthetic Style</label>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+              <button 
+                v-for="style in ['Modern Graphic Novel', 'Cyberpunk Neon', 'Classic Vintage 90s', 'Manga Noir']" 
+                :key="style"
+                type="button"
+                @click="form.artStyle = style"
+                :class="form.artStyle === style ? 'border-brand-cyan bg-cyan-500/10 text-cyan-200' : 'border-brand-cardBorder bg-brand-dark/60 text-slate-400 hover:text-slate-200'"
+                class="p-2.5 rounded-xl border text-xs font-medium text-center transition">
+                {{ style }}
+              </button>
+            </div>
+          </div>
+
+          <!-- Generate Action Button -->
+          <div class="pt-4 border-t border-white/5 flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div class="text-xs text-slate-400 flex items-center gap-1.5">
+              <span class="w-2 h-2 rounded-full" :class="apiKey ? 'bg-emerald-400' : 'bg-amber-400'"></span>
+              <span>{{ apiKey ? 'Using configured Gemini API Key' : 'Running in Offline Smart Demo Generator' }}</span>
+            </div>
+
+            <button 
+              @click="generateComic" 
+              class="w-full sm:w-auto px-8 py-4 rounded-xl bg-gradient-to-r from-brand-purple via-brand-pink to-brand-cyan hover:opacity-95 text-white font-extrabold text-base shadow-neon-purple transform hover:scale-[1.02] active:scale-95 transition flex items-center justify-center gap-2">
+              <i data-lucide="sparkles" class="w-5 h-5 text-brand-yellow"></i>
+              <span>✨ Generate Comic</span>
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= 3. AI GENERATION LOADING VIEW ================= -->
+      <section v-if="currentView === 'loading'" class="max-w-xl mx-auto px-4 py-24 text-center">
+        
+        <div class="glass-card rounded-3xl p-8 sm:p-12 border border-brand-cardBorder relative overflow-hidden shadow-2xl">
+          
+          <!-- Animated Spinner Background -->
+          <div class="absolute -top-24 -left-24 w-48 h-48 bg-brand-purple/20 rounded-full blur-3xl animate-pulse"></div>
+          <div class="absolute -bottom-24 -right-24 w-48 h-48 bg-brand-cyan/20 rounded-full blur-3xl animate-pulse"></div>
+
+          <!-- Comic Ink Animation Box -->
+          <div class="w-24 h-24 mx-auto mb-6 relative flex items-center justify-center">
+            <div class="absolute inset-0 rounded-2xl bg-gradient-to-tr from-brand-purple via-brand-pink to-brand-cyan animate-spin opacity-80 blur-sm"></div>
+            <div class="relative w-20 h-20 rounded-xl bg-brand-dark flex items-center justify-center border-2 border-white/20">
+              <i data-lucide="sparkles" class="w-10 h-10 text-brand-yellow animate-bounce"></i>
+            </div>
+          </div>
+
+          <h2 class="text-2xl sm:text-3xl font-extrabold text-white mb-2">Creating your comic...</h2>
+          <p class="text-sm text-slate-400 mb-8">{{ loadingStepText }}</p>
+
+          <!-- Dynamic Progress Steps -->
+          <div class="space-y-3 text-left max-w-sm mx-auto">
+            <div v-for="(step, idx) in generationSteps" :key="idx" class="flex items-center gap-3 text-xs">
+              <div class="w-5 h-5 rounded-full flex items-center justify-center" :class="idx <= currentStepIndex ? 'bg-brand-purple text-white' : 'bg-slate-800 text-slate-600'">
+                <i v-if="idx < currentStepIndex" data-lucide="check" class="w-3 h-3"></i>
+                <span v-else>{{ idx + 1 }}</span>
+              </div>
+              <span :class="idx === currentStepIndex ? 'text-brand-cyan font-bold animate-pulse' : (idx < currentStepIndex ? 'text-slate-300 font-medium' : 'text-slate-600')">
+                {{ step }}
+              </span>
+            </div>
+          </div>
+
+          <div class="mt-8 pt-4 border-t border-white/5 text-[11px] text-slate-500 font-mono">
+            Model: gemini-1.5-flash • JSON Strict Mode
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= 4. COMIC RESULT VIEW ================= -->
+      <section v-if="currentView === 'result' && comic" class="max-w-6xl mx-auto px-4 sm:px-6 py-8">
+        
+        <!-- Action Toolbar Top -->
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-8 bg-brand-card/90 p-4 rounded-2xl border border-brand-cardBorder">
+          
+          <div class="flex items-center gap-2">
+            <button @click="currentView = 'create'" class="px-3.5 py-2 rounded-xl bg-white/5 hover:bg-white/10 text-slate-300 hover:text-white text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="chevron-left" class="w-4 h-4"></i>
+              <span>Back to Studio</span>
+            </button>
+            <span class="text-xs text-slate-500">|</span>
+            <span class="text-xs font-bold text-brand-purple uppercase tracking-wider px-2.5 py-1 bg-brand-purple/10 rounded-lg border border-brand-purple/20">
+              {{ comic.genre }} • {{ comic.tone }}
+            </span>
+          </div>
+
+          <!-- Buttons: Generate Again, Edit, Copy, Save, Share, Export -->
+          <div class="flex flex-wrap items-center gap-2">
+            <button @click="generateComic" class="px-3.5 py-2 rounded-xl bg-brand-purple/20 hover:bg-brand-purple/30 text-purple-200 text-xs font-bold border border-brand-purple/40 flex items-center gap-1.5 transition">
+              <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+              <span>Generate Again</span>
+            </button>
+
+            <button @click="editStory" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="edit-3" class="w-3.5 h-3.5"></i>
+              <span>Edit</span>
+            </button>
+
+            <button @click="copyComicText" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition">
+              <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+              <span>Copy</span>
+            </button>
+
+            <button @click="saveComicToLibrary" class="px-3.5 py-2 rounded-xl bg-brand-pink/20 hover:bg-brand-pink/30 text-pink-200 border border-brand-pink/40 text-xs font-bold flex items-center gap-1.5 transition">
+              <i data-lucide="bookmark" class="w-3.5 h-3.5"></i>
+              <span>{{ isCurrentComicSaved ? 'Saved in Library ✓' : 'Save Comic' }}</span>
+            </button>
+
+            <button @click="shareComic" class="px-3.5 py-2 rounded-xl bg-brand-cyan/20 hover:bg-brand-cyan/30 text-cyan-200 border border-brand-cyan/40 text-xs font-bold flex items-center gap-1.5 transition">
+              <i data-lucide="share-2" class="w-3.5 h-3.5"></i>
+              <span>Share</span>
+            </button>
+
+            <button @click="printComic" class="px-3 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-semibold flex items-center gap-1.5 transition" title="Print / Save PDF">
+              <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+            </button>
+          </div>
+
+        </div>
+
+        <!-- PRINTABLE COMIC CONTAINER -->
+        <div id="comic-printable-area" class="space-y-8">
+          
+          <!-- COMIC HEADER BLOCK -->
+          <div class="glass-card rounded-2xl p-6 sm:p-8 border-2 border-brand-purple/30 relative overflow-hidden bg-dots-dense">
+            <div class="absolute -right-10 -bottom-10 opacity-10 pointer-events-none">
+              <i data-lucide="zap" class="w-64 h-64 text-brand-purple"></i>
+            </div>
+
+            <div class="flex flex-col md:flex-row items-start md:items-center justify-between gap-4 pb-6 border-b border-white/10">
+              <div>
+                <div class="flex items-center gap-2 mb-2">
+                  <span class="font-comic text-sm tracking-wider px-2.5 py-0.5 rounded bg-brand-yellow text-slate-950 font-black shadow-comic">
+                    ISSUE #1
+                  </span>
+                  <span class="text-xs text-slate-400 font-mono">{{ comic.panels.length }} Panels Deluxe Edition</span>
+                </div>
+                <h1 class="text-3xl sm:text-5xl font-extrabold text-white tracking-tight font-comic tracking-wide text-transparent bg-clip-text bg-gradient-to-r from-yellow-300 via-pink-400 to-cyan-300">
+                  {{ comic.title }}
+                </h1>
+              </div>
+
+              <!-- Badges -->
+              <div class="flex flex-wrap gap-2">
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-brand-surface border border-slate-700 text-slate-300">
+                  🎨 {{ comic.artStyle || 'Graphic Novel' }}
+                </span>
+                <span class="text-xs font-bold px-3 py-1 rounded-full bg-brand-purple/20 border border-brand-purple/30 text-purple-300">
+                  🔥 {{ comic.tone }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Story Summary Box -->
+            <div class="mt-4 pt-2">
+              <h4 class="text-xs font-bold uppercase tracking-wider text-brand-cyan mb-1 flex items-center gap-1.5">
+                <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+                <span>Story Synopsis</span>
+              </h4>
+              <p class="text-sm text-slate-300 leading-relaxed font-sans">
+                {{ comic.summary }}
+              </p>
+            </div>
+
+          </div>
+
+          <!-- CHARACTERS ROSTER -->
+          <div v-if="comic.characters && comic.characters.length > 0">
+            <div class="flex items-center gap-2 mb-4">
+              <i data-lucide="users" class="w-4 h-4 text-brand-pink"></i>
+              <h3 class="text-base font-extrabold uppercase tracking-wider text-slate-200">Featured Characters</h3>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+              <div 
+                v-for="(char, idx) in comic.characters" 
+                :key="idx" 
+                class="glass-card rounded-xl p-4 border border-brand-cardBorder hover:border-brand-pink/50 transition">
+                <div class="flex items-center gap-3 mb-2">
+                  <div class="w-10 h-10 rounded-full flex items-center justify-center font-bold text-white shadow-md text-sm uppercase" :style="{ backgroundColor: char.avatarColor || getCharColor(idx) }">
+                    {{ char.name.substring(0, 2) }}
+                  </div>
+                  <div>
+                    <h4 class="text-sm font-bold text-white leading-tight">{{ char.name }}</h4>
+                    <span class="text-[11px] font-medium text-brand-cyan">{{ char.role }}</span>
+                  </div>
+                </div>
+                <p class="text-xs text-slate-400 line-clamp-3 leading-normal">{{ char.description }}</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- COMIC PANELS GRID (PREMIUM DIGITAL COMIC LAYOUT) -->
+          <div>
+            <div class="flex items-center justify-between mb-4">
+              <div class="flex items-center gap-2">
+                <i data-lucide="film" class="w-4 h-4 text-brand-cyan"></i>
+                <h3 class="text-base font-extrabold uppercase tracking-wider text-slate-200">Comic Panels</h3>
+              </div>
+              <span class="text-xs text-slate-400 font-mono">Read Left to Right • Top to Bottom</span>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+              
+              <!-- Individual Comic Panel -->
+              <div 
+                v-for="panel in comic.panels" 
+                :key="panel.number" 
+                class="comic-panel-border rounded-2xl bg-brand-dark flex flex-col overflow-hidden transition-all duration-300 relative group">
+                
+                <!-- Panel Header Tag -->
+                <div class="bg-brand-surface/90 px-4 py-2 border-b border-brand-cardBorder flex items-center justify-between">
+                  <span class="font-comic text-xs tracking-wider text-brand-yellow font-black">
+                    PANEL #0{{ panel.number }}
+                  </span>
+                  <span v-if="panel.sfx" class="font-comic text-xs tracking-widest text-brand-pink transform rotate-2 animate-bounce">
+                    * {{ panel.sfx }} *
+                  </span>
+                </div>
+
+                <!-- Comic Visual Graphic Artwork Box (Generative SVG/Canvas Vector scene styling) -->
+                <div class="relative h-64 sm:h-72 w-full overflow-hidden p-4 flex flex-col justify-between" :style="{ background: getPanelGradient(panel.number, comic.genre) }">
+                  
+                  <!-- Comic Scene Background Pattern & Silhouettes -->
+                  <div class="absolute inset-0 bg-halftone opacity-25 pointer-events-none"></div>
+                  
+                  <!-- Dynamic Visual Graphic Backdrop Overlay -->
+                  <div class="absolute inset-0 flex items-center justify-center opacity-20 pointer-events-none overflow-hidden">
+                    <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                      <polygon points="0,0 100,20 100,100 0,80" fill="rgba(255,255,255,0.05)" />
+                      <line x1="0" y1="0" x2="100" y2="100" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+                      <line x1="100" y1="0" x2="0" y2="100" stroke="rgba(255,255,255,0.1)" stroke-width="0.5" />
+                    </svg>
+                  </div>
+
+                  <!-- TOP NARRATION BOX (Classic Yellow Comic Strip Caption) -->
+                  <div v-if="panel.narration" class="relative z-10 self-start max-w-[90%]">
+                    <div class="bg-amber-300 text-slate-950 text-xs font-bold px-3 py-1.5 rounded shadow-comic border-2 border-black leading-snug">
+                      {{ panel.narration }}
+                    </div>
+                  </div>
+
+                  <!-- CENTER SCENE ACTION / ENVIRONMENT DESCRIPTION -->
+                  <div class="relative z-10 my-auto py-2 px-3 rounded-lg bg-black/50 backdrop-blur-sm border border-white/10 max-w-[95%] self-center">
+                    <div class="text-[10px] uppercase font-mono font-bold text-cyan-300 tracking-wider mb-0.5">🎬 Visual Scene:</div>
+                    <p class="text-xs text-slate-200 leading-snug font-sans italic">
+                      {{ panel.scene }}
+                    </p>
+                  </div>
+
+                  <!-- SFX Burst Graphic if prominent -->
+                  <div v-if="panel.sfx" class="absolute top-1/2 right-4 transform -translate-y-1/2 rotate-12 z-20 pointer-events-none">
+                    <span class="font-comic text-2xl sm:text-3xl text-brand-yellow font-black tracking-wider drop-shadow-[0_4px_4px_rgba(0,0,0,1)] px-2 py-1">
+                      {{ panel.sfx }}
+                    </span>
+                  </div>
+
+                  <!-- DIALOGUE BALLOONS -->
+                  <div v-if="panel.dialogue && panel.dialogue.length > 0" class="relative z-10 space-y-2 mt-2">
+                    <div 
+                      v-for="(dlg, dIdx) in panel.dialogue" 
+                      :key="dIdx" 
+                      :class="dIdx % 2 === 0 ? 'flex justify-start' : 'flex justify-end'">
+                      
+                      <div 
+                        class="bg-white text-slate-900 px-3.5 py-2 rounded-2xl shadow-comic max-w-[85%] border-2 border-black text-xs font-semibold leading-tight speech-bubble"
+                        :class="dIdx % 2 === 0 ? '' : 'speech-bubble-right bg-slate-100'">
+                        <span class="block text-[10px] font-black uppercase text-brand-purple tracking-wide">
+                          {{ dlg.speaker }}:
+                        </span>
+                        <span>{{ dlg.text }}</span>
+                      </div>
+
+                    </div>
+                  </div>
+
+                </div>
+
+              </div>
+
+            </div>
+          </div>
+
+          <!-- COMIC STORY ENDING -->
+          <div v-if="comic.ending" class="glass-card rounded-2xl p-6 border border-brand-cardBorder text-center bg-gradient-to-r from-brand-purple/10 via-brand-pink/10 to-brand-cyan/10">
+            <div class="font-comic text-2xl text-brand-yellow tracking-widest mb-2 uppercase">*** THE END ***</div>
+            <p class="text-sm text-slate-300 max-w-2xl mx-auto italic font-serif leading-relaxed">
+              "{{ comic.ending }}"
+            </p>
+          </div>
+
+          <!-- Bottom Action Bar -->
+          <div class="flex flex-wrap items-center justify-center gap-4 pt-6">
+            <button @click="saveComicToLibrary" class="px-6 py-3 rounded-xl bg-brand-pink text-white font-bold text-sm shadow-md hover:bg-pink-600 transition flex items-center gap-2">
+              <i data-lucide="bookmark-check" class="w-4 h-4"></i>
+              <span>Save to My Comics Collection</span>
+            </button>
+            <button @click="startNewComic" class="px-6 py-3 rounded-xl bg-brand-purple text-white font-bold text-sm shadow-neon-purple hover:bg-purple-600 transition flex items-center gap-2">
+              <i data-lucide="sparkles" class="w-4 h-4"></i>
+              <span>Create Another Story</span>
+            </button>
+          </div>
+
+        </div>
+
+      </section>
+
+      <!-- ================= 5. MY COMICS LIBRARY VIEW ================= -->
+      <section v-if="currentView === 'library'" class="max-w-6xl mx-auto px-4 sm:px-6 py-10">
+        
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-8">
+          <div>
+            <div class="flex items-center gap-2 text-xs font-bold text-brand-pink uppercase tracking-wider mb-1">
+              <i data-lucide="archive" class="w-4 h-4"></i>
+              <span>Saved Archive</span>
+            </div>
+            <h2 class="text-3xl font-extrabold text-white">My Comic Collection</h2>
+            <p class="text-sm text-slate-400">All your saved stories stored securely in local storage.</p>
+          </div>
+
+          <div class="flex items-center gap-3">
+            <button v-if="savedComics.length > 0" @click="clearAllSavedComics" class="text-xs text-rose-400 hover:text-rose-300 px-3 py-2 rounded-lg bg-rose-500/10 border border-rose-500/20 transition">
+              Clear All
+            </button>
+            <button @click="currentView = 'create'" class="px-4 py-2 rounded-xl bg-brand-purple hover:bg-purple-600 text-white font-bold text-xs flex items-center gap-1.5 transition">
+              <i data-lucide="plus" class="w-4 h-4"></i>
+              <span>New Comic</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Empty State -->
+        <div v-if="savedComics.length === 0" class="glass-card rounded-3xl p-12 text-center border border-brand-cardBorder max-w-lg mx-auto">
+          <div class="w-16 h-16 rounded-2xl bg-brand-purple/10 text-brand-purple flex items-center justify-center mx-auto mb-4 border border-brand-purple/20">
+            <i data-lucide="book-dashed" class="w-8 h-8"></i>
+          </div>
+          <h3 class="text-xl font-bold text-white mb-2">No Saved Comics Yet</h3>
+          <p class="text-sm text-slate-400 mb-6">Generate your first comic story using Gemini AI and click the Save button to keep it here forever!</p>
+          <button @click="currentView = 'create'" class="px-6 py-3 rounded-xl bg-brand-purple hover:bg-purple-600 text-white font-bold text-xs shadow-neon-purple transition inline-flex items-center gap-2">
+            <i data-lucide="sparkles" class="w-4 h-4 text-brand-yellow"></i>
+            <span>Create First Comic</span>
+          </button>
+        </div>
+
+        <!-- Saved Comics Grid -->
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <div 
+            v-for="(item, index) in savedComics" 
+            :key="item.id || index" 
+            class="glass-card rounded-2xl p-5 border border-brand-cardBorder hover:border-brand-purple/60 transition-all duration-200 flex flex-col justify-between group shadow-lg">
+            
+            <div>
+              <div class="flex items-center justify-between text-xs text-slate-400 mb-3 pb-2 border-b border-white/5">
+                <span class="font-bold text-brand-cyan">{{ item.genre }}</span>
+                <span class="font-mono text-[11px]">{{ formatDate(item.savedAt) }}</span>
+              </div>
+
+              <h4 class="font-comic text-xl text-white tracking-wide group-hover:text-brand-yellow transition mb-2">
+                {{ item.title }}
+              </h4>
+
+              <p class="text-xs text-slate-400 line-clamp-3 leading-relaxed mb-4">
+                {{ item.summary }}
+              </p>
+
+              <div class="flex items-center gap-2 text-[11px] text-slate-300 font-medium mb-4">
+                <span class="px-2 py-0.5 rounded bg-brand-surface border border-slate-700">
+                  {{ item.panels.length }} Panels
+                </span>
+                <span class="px-2 py-0.5 rounded bg-brand-surface border border-slate-700">
+                  {{ item.characters ? item.characters.length : 0 }} Characters
+                </span>
+              </div>
+            </div>
+
+            <div class="flex items-center justify-between pt-3 border-t border-white/5">
+              <button @click="openSavedComic(item)" class="text-xs font-bold text-brand-purple hover:text-purple-300 flex items-center gap-1">
+                <span>Read Comic</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+
+              <button @click="deleteSavedComic(index)" class="p-1.5 rounded-lg text-slate-500 hover:text-rose-400 hover:bg-rose-500/10 transition" title="Delete">
+                <i data-lucide="trash-2" class="w-4 h-4"></i>
+              </button>
+            </div>
+
+          </div>
+        </div>
+
+      </section>
+
+    </main>
+
+    <!-- ================= FOOTER ================= -->
+    <footer class="border-t border-brand-cardBorder bg-brand-dark/95 mt-20 py-8">
+      <div class="max-w-7xl mx-auto px-4 sm:px-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-slate-400">
+        <div class="flex items-center gap-2">
+          <div class="w-6 h-6 rounded bg-brand-purple flex items-center justify-center font-comic text-white text-xs">CC</div>
+          <span class="font-bold text-slate-200">COMICCRAFT</span>
+          <span>— Premium AI Comic Story Studio</span>
+        </div>
+        <div class="flex items-center gap-4 text-xs">
+          <button @click="openDocsModal" class="hover:text-brand-cyan transition">Fullstack Code & Architecture</button>
+          <span>•</span>
+          <button @click="openApiSettings" class="hover:text-brand-purple transition">API Configuration</button>
+          <span>•</span>
+          <span>Powered by Gemini AI</span>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ================= MODAL: BACKEND ARCHITECTURE & NODE.JS EXPRESS CODE ================= -->
+    <div v-if="showDocsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div class="glass-card rounded-2xl border border-brand-cardBorder max-w-3xl w-full max-h-[85vh] flex flex-col overflow-hidden shadow-2xl">
+        
+        <div class="p-5 border-b border-brand-cardBorder flex items-center justify-between bg-brand-surface/80">
+          <div class="flex items-center gap-2">
+            <div class="p-1.5 rounded-lg bg-brand-purple/20 text-brand-purple">
+              <i data-lucide="server" class="w-5 h-5"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-bold text-white">Fullstack Architecture & Deployment Specs</h3>
+              <p class="text-xs text-slate-400">Website → Node.js Backend → Gemini API → Backend → Website</p>
+            </div>
+          </div>
+          <button @click="showDocsModal = false" class="text-slate-400 hover:text-white p-1 rounded-lg">
+            <i data-lucide="x" class="w-5 h-5"></i>
+          </button>
+        </div>
+
+        <div class="p-6 overflow-y-auto space-y-6 text-xs text-slate-300 leading-relaxed font-sans">
+          
+          <!-- Architecture Diagram -->
+          <div class="bg-brand-dark p-4 rounded-xl border border-brand-cardBorder">
+            <div class="text-[11px] font-mono text-brand-cyan uppercase font-bold mb-2">Secure Backend Pipeline</div>
+            <div class="flex flex-wrap items-center justify-between gap-2 text-center text-xs font-mono">
+              <div class="p-2.5 rounded bg-brand-surface border border-slate-700 flex-1">
+                💻 Frontend<br><span class="text-[10px] text-slate-500">Vue/React Client</span>
+              </div>
+              <span class="text-brand-purple font-bold">➔ POST /api/generate ➔</span>
+              <div class="p-2.5 rounded bg-brand-purple/20 border border-brand-purple flex-1">
+                🛡️ Node.js Express<br><span class="text-[10px] text-brand-cyan">Secret GEMINI_API_KEY</span>
+              </div>
+              <span class="text-brand-cyan font-bold">➔ REST JSON ➔</span>
+              <div class="p-2.5 rounded bg-brand-surface border border-slate-700 flex-1">
+                ✨ Gemini 1.5 Flash<br><span class="text-[10px] text-slate-500">Structured Schema</span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Tabbed Code Box for Backend -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-white text-xs">Production Node.js `server.js` File</span>
+              <button @click="copyCodeSnippet('serverCode')" class="text-xs text-brand-cyan hover:underline flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy server.js
+              </button>
+            </div>
+            <pre class="bg-brand-dark p-4 rounded-xl border border-brand-cardBorder overflow-x-auto text-[11px] font-mono text-emerald-400"><code>{{ serverJsCode }}</code></pre>
+          </div>
+
+          <!-- .env.example -->
+          <div>
+            <div class="flex items-center justify-between mb-2">
+              <span class="font-bold text-white text-xs">Environment Variables `.env.example`</span>
+              <button @click="copyCodeSnippet('envCode')" class="text-xs text-brand-cyan hover:underline flex items-center gap-1">
+                <i data-lucide="copy" class="w-3.5 h-3.5"></i> Copy .env.example
+              </button>
+            </div>
+            <pre class="bg-brand-dark p-3 rounded-xl border border-brand-cardBorder text-[11px] font-mono text-amber-300">PORT=5000
+GEMINI_API_KEY=AIzaSyYourSecretKeyHereFromGoogleStudio
+NODE_ENV=production</pre>
+          </div>
+
+        </div>
+
+        <div class="p-4 border-t border-brand-cardBorder bg-brand-surface/60 flex justify-end">
+          <button @click="showDocsModal = false" class="px-5 py-2 rounded-xl bg-brand-purple text-white font-bold text-xs hover:bg-purple-600 transition">
+            Close Viewer
+          </button>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= MODAL: API KEY & SETTINGS ================= -->
+    <div v-if="showSettingsModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm">
+      <div class="glass-card rounded-2xl border border-brand-cardBorder max-w-md w-full p-6 shadow-2xl relative">
+        
+        <button @click="showSettingsModal = false" class="absolute top-4 right-4 text-slate-400 hover:text-white">
+          <i data-lucide="x" class="w-5 h-5"></i>
+        </button>
+
+        <div class="flex items-center gap-3 mb-4">
+          <div class="p-2 rounded-xl bg-brand-purple/20 text-brand-purple">
+            <i data-lucide="key" class="w-5 h-5"></i>
+          </div>
+          <div>
+            <h3 class="text-base font-bold text-white">Gemini API Settings</h3>
+            <p class="text-xs text-slate-400">Live Google Gemini or Instant Smart Demo</p>
+          </div>
+        </div>
+
+        <div class="space-y-4 text-xs">
+          <div>
+            <label class="block font-bold text-slate-300 mb-1">Google Gemini API Key (Optional)</label>
+            <input 
+              v-model="tempApiKey" 
+              type="password" 
+              placeholder="AIzaSy..." 
+              class="w-full bg-brand-dark border-2 border-brand-cardBorder focus:border-brand-purple rounded-xl px-3.5 py-2.5 text-xs text-white focus:outline-none transition font-mono" />
+            <p class="text-[11px] text-slate-500 mt-1">
+              Leave empty to use built-in offline smart demo mode with instant structured outputs.
+            </p>
+          </div>
+
+          <div class="p-3 rounded-xl bg-brand-surface/80 border border-slate-700">
+            <span class="text-slate-300 font-semibold block mb-1">🔒 Security Notice</span>
+            <p class="text-[11px] text-slate-400 leading-relaxed">
+              When entered here, the key is saved purely in your local browser storage. In a production Node.js deployment, store it in <code class="text-brand-cyan">.env</code>.
+            </p>
+          </div>
+
+          <div class="flex items-center justify-between gap-3 pt-2">
+            <button @click="clearApiKey" class="px-3.5 py-2 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold text-xs transition">
+              Use Demo Mode
+            </button>
+            <button @click="saveApiKey" class="px-5 py-2 rounded-xl bg-brand-purple hover:bg-purple-600 text-white font-bold text-xs shadow-neon-purple transition">
+              Save Settings
+            </button>
+          </div>
+        </div>
+
+      </div>
+    </div>
+
+    <!-- ================= TOAST NOTIFICATION POPUP ================= -->
+    <div v-if="toast.show" class="fixed bottom-6 right-6 z-50 transform transition-all duration-300">
+      <div class="glass-card border border-brand-purple/50 text-white px-4 py-3 rounded-xl shadow-2xl flex items-center gap-3 bg-brand-dark/95">
+        <i data-lucide="check-circle" class="w-4 h-4 text-emerald-400"></i>
+        <span class="text-xs font-semibold">{{ toast.message }}</span>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- APPLICATION VUE SCRIPT -->
+  <script>
+    const { createApp, ref, reactive, computed, onMounted, nextTick } = Vue;
+
+    createApp({
+      setup() {
+        // Navigation & Views
+        const currentView = ref('home'); // 'home', 'create', 'loading', 'result', 'library'
+        const showDocsModal = ref(false);
+        const showSettingsModal = ref(false);
+        const validationError = ref('');
+
+        // API Key state
+        const apiKey = ref(localStorage.getItem('comiccraft_gemini_key') || '');
+        const tempApiKey = ref(apiKey.value);
+
+        // Toast feedback
+        const toast = reactive({ show: false, message: '' });
+        const triggerToast = (msg) => {
+          toast.message = msg;
+          toast.show = true;
+          setTimeout(() => { toast.show = false; }, 3200);
+          nextTick(() => lucide.createIcons());
+        };
+
+        // Form Inputs
+        const form = reactive({
+          prompt: '',
+          genre: 'Sci-Fi',
+          tone: 'Exciting',
+          panels: 4,
+          artStyle: 'Modern Graphic Novel'
+        });
+
+        // Loading steps
+        const currentStepIndex = ref(0);
+        const loadingStepText = ref('Connecting to Gemini AI Engine...');
+        const generationSteps = [
+          'Analyzing narrative arc & conflict...',
+          'Designing character profiles & traits...',
+          'Inking panels, dialogue & sound effects...',
+          'Rendering comic colors & final assembly...'
+        ];
+
+        // Active Generated Comic Object
+        const comic = ref(null);
+
+        // Saved Comics Library
+        const savedComics = ref(JSON.parse(localStorage.getItem('comiccraft_saved_library') || '[]'));
+
+        // Preset story ideas
+        const storyPresets = [
+          {
+            emoji: '🐱🕶️',
+            label: 'Cyberpunk Cat Detective',
+            prompt: 'In Neo-Kyoto year 2099, a sharp-witted stray cat detective named Whiskers investigates the theft of the city’s quantum tuna supply from the Megacorp tower.',
+            genre: 'Cyberpunk',
+            tone: 'Exciting',
+            panels: 4
+          },
+          {
+            emoji: '🐉🧁',
+            label: 'The Baker Dragon',
+            prompt: 'Ignis, an ancient flame-breathing dragon, abandons hoarding gold to pursue his secret dream of opening the finest pastry bakery in the kingdom of Oakhaven.',
+            genre: 'Comedy',
+            tone: 'Funny',
+            panels: 4
+          },
+          {
+            emoji: '⏳🪐',
+            label: 'Lost in Kepler-452b',
+            prompt: 'Astronaut Maya discovers a glowing alien temple that sends strange audio broadcasts from Earth’s Victorian era.',
+            genre: 'Mystery',
+            tone: 'Mysterious',
+            panels: 4
+          },
+          {
+            emoji: '🧙‍♂️⚡',
+            label: 'Rookie Wizard Duel',
+            prompt: 'During the annual High Academy exam, two rival students accidentally fuse their lightning and polymorph spells with hilarious consequences.',
+            genre: 'Fantasy',
+            tone: 'Exciting',
+            panels: 4
+          }
+        ];
+
+        // Sample Built-in Rich Comic Generator (for Instant Demo Mode & Fallback)
+        const generateProceduralDemoComic = (promptText, genre, tone, panelsCount, artStyle) => {
+          const titleMap = {
+            'Sci-Fi': 'NEON CHRONICLES: THE QUANTUM HEIST',
+            'Fantasy': 'SPELLBOUND: THE DRAGON’S SECRET RECIPE',
+            'Cyberpunk': 'CIRCUIT RUNNER: PROTOCOL 9',
+            'Comedy': 'CHAOS AT THE ARCANE BAKERY',
+            'Mystery': 'THE WHISPERING TRANSMISSION',
+            'Superhero': 'VORTEX: RISE OF THE VANGUARD',
+            'Horror': 'SHADOWS OF THE ABYSS',
+            'Adventure': 'EXPEDITION: THE SUNKEN RELIC'
+          };
+
+          const dynamicTitle = titleMap[genre] || `${genre.toUpperCase()}: THE UNTOLD CHRONICLE`;
+          
+          const panelTemplates = [
+            {
+              number: 1,
+              scene: `Wide establishing shot of the sprawling futuristic skyline under heavy rain and neon billboards. Silhouette of the hero standing at the rooftop edge.`,
+              narration: `The city never sleeps... and neither do those who lurk within its deepest digital shadows.`,
+              sfx: `WHOOSH!`,
+              dialogue: [
+                { speaker: 'Protagonist', text: "Telemetry is locked in. The security grid goes down in thirty seconds." }
+              ]
+            },
+            {
+              number: 2,
+              scene: `Dynamic low-angle action shot inside a high-tech vault filled with glowing data crystals. The alarm lights flash vivid crimson.`,
+              narration: `One wrong step would trigger the automated plasma turrets.`,
+              sfx: `*BZZZZT!*`,
+              dialogue: [
+                { speaker: 'Rival Infiltrator', text: "Did you really think you were the only one after the core?" },
+                { speaker: 'Protagonist', text: "Step aside! You have no idea what power you're playing with!" }
+              ]
+            },
+            {
+              number: 3,
+              scene: `Close-up intense panel with split-screen energy clashes. Sparks and holographic shards fly across the frame.`,
+              narration: `Energy collided with thunderous force, shattering the containment sphere!`,
+              sfx: `*KABOOM!*`,
+              dialogue: [
+                { speaker: 'AI Companion', text: "Warning! Containment breach at 98%! We need to evacuate now!" }
+              ]
+            },
+            {
+              number: 4,
+              scene: `Hero makes a daring escape leap out the glass window into the night, clutching the mysterious artifact as dawn breaks over the horizon.`,
+              narration: `With seconds to spare, the relic was secured... but the true mystery had only just begun.`,
+              sfx: `*CRASH!*`,
+              dialogue: [
+                { speaker: 'Protagonist', text: "Tell the team the package is secured. Next stop: Orbit." }
+              ]
+            },
+            {
+              number: 5,
+              scene: `A secret underground laboratory revealed beneath the city streets, lined with ancient glyphs alongside quantum supercomputers.`,
+              narration: `Deep beneath the surface, ancient truths awakened.`,
+              sfx: `*HUMMMM*`,
+              dialogue: [
+                { speaker: 'Professor Vance', text: "Incredible... the signature matches the 1920 expedition logs!" }
+              ]
+            },
+            {
+              number: 6,
+              scene: `The entire squad gathers around the illuminated holographic map as a gigantic unknown portal coordinates appear.`,
+              narration: `The puzzle pieces snapped together, pointing toward the uncharted cosmic rift.`,
+              sfx: `*CHIME*`,
+              dialogue: [
+                { speaker: 'Protagonist', text: "Pack your gear, team. We're going beyond the event horizon." }
+              ]
+            },
+            {
+              number: 7,
+              scene: `Epic cosmic gateway opening amidst asteroid fields with prismatic auroras swirling around the starship hull.`,
+              narration: `Stepping into the unknown requires fearless resolve.`,
+              sfx: `*VROOOOM!*`,
+              dialogue: [
+                { speaker: 'Pilot', text: "Hyperdrive engaged! Hold on to something!" }
+              ]
+            },
+            {
+              number: 8,
+              scene: `Triumphant final splash panel: The heroes arrive at the celestial paradise world, looking forward toward destiny.`,
+              narration: `And so, the legends of the new frontier began.`,
+              sfx: `*SHINE!*`,
+              dialogue: [
+                { speaker: 'Protagonist', text: "We made it. Welcome to the new world." }
+              ]
+            }
+          ];
+
+          return {
+            title: dynamicTitle,
+            summary: promptText ? `Based on: "${promptText}". A dynamic ${tone.toLowerCase()} ${genre.toLowerCase()} saga filled with twists, cinematic action, and sharp character dialogue.` : `A thrilling ${tone} adventure exploring high-stakes encounters and unexpected allies.`,
+            genre: genre,
+            tone: tone,
+            artStyle: artStyle,
+            characters: [
+              { name: 'Kaelen Vance', role: 'Main Protagonist & Specialist', description: 'Quick-witted and relentless with a heart of gold.', avatarColor: '#8b5cf6' },
+              { name: 'Unit 7-Echo', role: 'AI Tactician & Hacker', description: 'A sentient drone with dry humor and immense processing power.', avatarColor: '#06b6d4' },
+              { name: 'Cipher', role: 'Enigmatic Rival', description: 'A shadowy operative with conflicting loyalties.', avatarColor: '#ec4899' }
+            ],
+            panels: panelTemplates.slice(0, panelsCount),
+            ending: `The signal faded into the starry expanse, leaving only echoes of a journey that altered the fate of the cosmos forever.`
+          };
+        };
+
+        // Real Google Gemini API Fetch
+        const callGeminiApi = async (prompt, genre, tone, panelsCount, artStyle) => {
+          const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey.value}`;
+
+          const systemPrompt = `You are an elite Comic Book Writer and Director. Create a structured comic story script in strict JSON based on the user's prompt.
+Respond ONLY with a valid JSON object with NO markdown backticks, NO commentary.
+JSON Structure required:
+{
+  "title": "Short Catchy Comic Title",
+  "summary": "2-3 sentence overview of the issue",
+  "genre": "${genre}",
+  "tone": "${tone}",
+  "artStyle": "${artStyle}",
+  "characters": [
+    { "name": "Character Name", "role": "Role in story", "description": "Brief visual and personality description", "avatarColor": "#hexColor" }
+  ],
+  "panels": [
+    {
+      "number": 1,
+      "scene": "Detailed visual description of angle, action, lighting, and expressions for the comic artist",
+      "narration": "Yellow box narration text or empty string",
+      "sfx": "Comic sound effect like POW!, BAM!, BZZT! or empty string",
+      "dialogue": [
+        { "speaker": "Character Name", "text": "What they say in speech bubble" }
+      ]
+    }
+  ],
+  "ending": "A punchy final comic closing line or cliffhanger"
+}
+Ensure exactly ${panelsCount} panels are created with engaging pacing.`;
+
+          const bodyPayload = {
+            contents: [
+              {
+                role: "user",
+                parts: [
+                  { text: `${systemPrompt}\n\nUser Story Idea: ${prompt}` }
+                ]
+              }
+            ],
+            generationConfig: {
+              temperature: 0.75,
+              responseMimeType: "application/json"
+            }
+          };
+
+          const response = await fetch(endpoint, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(bodyPayload)
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            throw new Error(errData.error?.message || `Gemini API Error (HTTP ${response.status})`);
+          }
+
+          const resData = await response.json();
+          const rawText = resData.candidates?.[0]?.content?.parts?.[0]?.text;
+          if (!rawText) throw new Error("Empty response returned by Gemini API.");
+
+          // Clean possible markdown formatting
+          const cleanJson = rawText.replace(/```json/g, '').replace(/```/g, '').trim();
+          return JSON.parse(cleanJson);
+        };
+
+        // Main Generate Trigger
+        const generateComic = async () => {
+          if (!form.prompt.trim()) {
+            validationError.value = 'Please enter a story idea or choose one of the quick presets!';
+            return;
+          }
+          validationError.value = '';
+          currentView.value = 'loading';
+          currentStepIndex.value = 0;
+          loadingStepText.value = generationSteps[0];
+
+          // Progress Step Animation Timer
+          const stepInterval = setInterval(() => {
+            if (currentStepIndex.value < generationSteps.length - 1) {
+              currentStepIndex.value++;
+              loadingStepText.value = generationSteps[currentStepIndex.value];
+            }
+          }, 600);
+
+          try {
+            let resultData;
+            if (apiKey.value && apiKey.value.trim() !== '') {
+              // Real Gemini Call
+              resultData = await callGeminiApi(form.prompt, form.genre, form.tone, form.panels, form.artStyle);
+            } else {
+              // Realistic Simulated Delay + Procedural Demo
+              await new Promise(resolve => setTimeout(resolve, 2400));
+              resultData = generateProceduralDemoComic(form.prompt, form.genre, form.tone, form.panels, form.artStyle);
+            }
+
+            clearInterval(stepInterval);
+            comic.value = resultData;
+            currentView.value = 'result';
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            triggerToast('✨ Comic created successfully!');
+          } catch (err) {
+            clearInterval(stepInterval);
+            console.error(err);
+            triggerToast('⚠️ Gemini API error. Falling back to Demo Studio engine...');
+            // Graceful fallback to demo generator on API errors
+            comic.value = generateProceduralDemoComic(form.prompt, form.genre, form.tone, form.panels, form.artStyle);
+            currentView.value = 'result';
+          } finally {
+            nextTick(() => lucide.createIcons());
+          }
+        };
+
+        // Presets handler
+        const applyPreset = (preset) => {
+          form.prompt = preset.prompt;
+          form.genre = preset.genre;
+          form.tone = preset.tone;
+          form.panels = preset.panels;
+          validationError.value = '';
+        };
+
+        // Start Demo from Home
+        const loadSampleAndPlay = () => {
+          applyPreset(storyPresets[0]);
+          generateComic();
+        };
+
+        const startNewComic = () => {
+          form.prompt = '';
+          currentView.value = 'create';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          nextTick(() => lucide.createIcons());
+        };
+
+        const editStory = () => {
+          currentView.value = 'create';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+        };
+
+        // Dynamic Comic Panel Art Color Palettes
+        const getPanelGradient = (panelNum, genre) => {
+          const gradients = {
+            'Sci-Fi': [
+              'linear-gradient(135deg, #090e24 0%, #171b3e 50%, #0d1230 100%)',
+              'linear-gradient(135deg, #160a2b 0%, #2a114f 50%, #0f0720 100%)',
+              'linear-gradient(135deg, #041b24 0%, #0b3b4d 50%, #061d26 100%)',
+              'linear-gradient(135deg, #24091f 0%, #4a133f 50%, #1b0717 100%)'
+            ],
+            'Fantasy': [
+              'linear-gradient(135deg, #1b0b2e 0%, #3b1663 50%, #150724 100%)',
+              'linear-gradient(135deg, #071f1d 0%, #0f4541 50%, #08211f 100%)',
+              'linear-gradient(135deg, #2a1506 0%, #522d11 50%, #211005 100%)',
+              'linear-gradient(135deg, #24091a 0%, #471134 50%, #1c0614 100%)'
+            ],
+            'Cyberpunk': [
+              'linear-gradient(135deg, #041a24 0%, #08384d 50%, #1b0429 100%)',
+              'linear-gradient(135deg, #2b0422 0%, #540c44 50%, #051a2e 100%)',
+              'linear-gradient(135deg, #03211a 0%, #0a4034 50%, #210419 100%)',
+              'linear-gradient(135deg, #1f042e 0%, #420a61 50%, #041f26 100%)'
+            ]
+          };
+          const list = gradients[genre] || gradients['Sci-Fi'];
+          return list[(panelNum - 1) % list.length];
+        };
+
+        const getCharColor = (idx) => {
+          const colors = ['#8b5cf6', '#06b6d4', '#ec4899', '#f59e0b', '#10b981'];
+          return colors[idx % colors.length];
+        };
+
+        // Local Storage Saved Comics Management
+        const isCurrentComicSaved = computed(() => {
+          if (!comic.value) return false;
+          return savedComics.value.some(c => c.title === comic.value.title && c.summary === comic.value.summary);
+        });
+
+        const saveComicToLibrary = () => {
+          if (!comic.value) return;
+          if (isCurrentComicSaved.value) {
+            triggerToast('📖 Comic is already in your library!');
+            return;
+          }
+          const itemToSave = {
+            ...comic.value,
+            id: 'comic_' + Date.now(),
+            savedAt: new Date().toISOString()
+          };
+          savedComics.value.unshift(itemToSave);
+          localStorage.setItem('comiccraft_saved_library', JSON.stringify(savedComics.value));
+          triggerToast('🎉 Comic saved to My Comics!');
+        };
+
+        const openSavedComic = (savedItem) => {
+          comic.value = savedItem;
+          currentView.value = 'result';
+          window.scrollTo({ top: 0, behavior: 'smooth' });
+          nextTick(() => lucide.createIcons());
+        };
+
+        const deleteSavedComic = (index) => {
+          savedComics.value.splice(index, 1);
+          localStorage.setItem('comiccraft_saved_library', JSON.stringify(savedComics.value));
+          triggerToast('🗑️ Comic removed from library.');
+        };
+
+        const clearAllSavedComics = () => {
+          if (confirm('Are you sure you want to clear your saved comic archive?')) {
+            savedComics.value = [];
+            localStorage.removeItem('comiccraft_saved_library');
+            triggerToast('Library cleared.');
+          }
+        };
+
+        const formatDate = (isoString) => {
+          if (!isoString) return 'Recent';
+          const d = new Date(isoString);
+          return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' });
+        };
+
+        // Actions: Copy, Share, Print
+        const copyComicText = async () => {
+          if (!comic.value) return;
+          let text = `*** ${comic.value.title} ***\nGenre: ${comic.value.genre} | Tone: ${comic.value.tone}\nSummary: ${comic.value.summary}\n\n`;
+          comic.value.panels.forEach(p => {
+            text += `[PANEL ${p.number}]\n`;
+            if (p.narration) text += `Narration: ${p.narration}\n`;
+            text += `Scene: ${p.scene}\n`;
+            if (p.sfx) text += `SFX: ${p.sfx}\n`;
+            if (p.dialogue) {
+              p.dialogue.forEach(d => {
+                text += `${d.speaker}: "${d.text}"\n`;
+              });
+            }
+            text += `\n`;
+          });
+          if (comic.value.ending) text += `Ending: ${comic.value.ending}\n`;
+
+          try {
+            await navigator.clipboard.writeText(text);
+            triggerToast('📋 Comic script copied to clipboard!');
+          } catch {
+            triggerToast('Unable to access clipboard.');
+          }
+        };
+
+        const shareComic = async () => {
+          if (navigator.share && comic.value) {
+            try {
+              await navigator.share({
+                title: comic.value.title,
+                text: `${comic.value.title} - An AI comic generated with ComicCraft:\n${comic.value.summary}`,
+                url: window.location.href
+              });
+            } catch (e) {
+              // Share cancelled or not supported
+            }
+          } else {
+            copyComicText();
+          }
+        };
+
+        const printComic = () => {
+          window.print();
+        };
+
+        // API Settings Modal
+        const openApiSettings = () => {
+          tempApiKey.value = apiKey.value;
+          showSettingsModal.value = true;
+          nextTick(() => lucide.createIcons());
+        };
+
+        const saveApiKey = () => {
+          apiKey.value = tempApiKey.value.trim();
+          localStorage.setItem('comiccraft_gemini_key', apiKey.value);
+          showSettingsModal.value = false;
+          triggerToast(apiKey.value ? '✅ Gemini API Key Saved!' : '⚡ Demo Mode Enabled');
+        };
+
+        const clearApiKey = () => {
+          apiKey.value = '';
+          tempApiKey.value = '';
+          localStorage.removeItem('comiccraft_gemini_key');
+          showSettingsModal.value = false;
+          triggerToast('⚡ Switched to Demo Mode');
+        };
+
+        // Docs Modal
+        const openDocsModal = () => {
+          showDocsModal.value = true;
+          nextTick(() => lucide.createIcons());
+        };
+
+        const serverJsCode = `// server.js - Node.js + Express Backend for ComicCraft
+import express from 'express';
+import cors from 'cors';
+import dotenv from 'dotenv';
+import { GoogleGenerativeAI } from '@google/generative-ai';
+
+dotenv.config();
+
+const app = express();
+app.use(cors());
+app.use(express.json());
+
+const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+
+app.post('/api/generate-comic', async (req, res) => {
+  try {
+    const { prompt, genre, tone, panels = 4, artStyle } = req.body;
+
+    if (!prompt) {
+      return res.status(400).json({ error: 'Story prompt is required.' });
+    }
+
+    const model = genAI.getGenerativeModel({
+      model: 'gemini-1.5-flash',
+      generationConfig: { responseMimeType: 'application/json' }
+    });
+
+    const systemPrompt = \`Create a \${genre} comic with \${panels} panels and \${tone} tone in valid structured JSON schema.\`;
+    const result = await model.generateContent(\`\${systemPrompt}\\nUser Story: \${prompt}\`);
+    const comicData = JSON.parse(result.response.text());
+
+    return res.json(comicData);
+  } catch (error) {
+    console.error('Gemini Generation Error:', error);
+    return res.status(500).json({ error: 'Failed to generate comic story.' });
+  }
+});
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log(\`ComicCraft Server running on port \${PORT}\`));`;
+
+        const copyCodeSnippet = async (type) => {
+          const text = type === 'serverCode' ? serverJsCode : 'PORT=5000\nGEMINI_API_KEY=your_key_here\n';
+          await navigator.clipboard.writeText(text);
+          triggerToast('Code copied to clipboard!');
+        };
+
+        onMounted(() => {
+          nextTick(() => {
+            lucide.createIcons();
+          });
+        });
+
+        return {
+          currentView,
+          form,
+          validationError,
+          storyPresets,
+          applyPreset,
+          loadSampleAndPlay,
+          startNewComic,
+          editStory,
+          generateComic,
+          currentStepIndex,
+          loadingStepText,
+          generationSteps,
+          comic,
+          getPanelGradient,
+          getCharColor,
+          savedComics,
+          isCurrentComicSaved,
+          saveComicToLibrary,
+          openSavedComic,
+          deleteSavedComic,
+          clearAllSavedComics,
+          formatDate,
+          copyComicText,
+          shareComic,
+          printComic,
+          showDocsModal,
+          openDocsModal,
+          showSettingsModal,
+          openApiSettings,
+          apiKey,
+          tempApiKey,
+          saveApiKey,
+          clearApiKey,
+          serverJsCode,
+          copyCodeSnippet,
+          toast
+        };
+      }
+    }).mount('#app');
+  </script>
+</body>
+</html>
